@@ -1,17 +1,14 @@
 import { redirect } from "next/navigation";
 import "server-only";
 
-import { APP_ROUTES, AUTH_REDIRECT_QUERY_KEY } from "@/lib/auth/config";
+import { APP_ROUTES } from "@/lib/auth/config";
 import type { AuthContext, UserProfile } from "@/lib/auth/types";
 import { createAdminClient } from "@/lib/supabase/admin";
+import type { TablesInsert } from "@/lib/supabase/database";
 import { createClient } from "@/lib/supabase/server";
 
 function buildRedirectTarget(pathname: string) {
-  const searchParams = new URLSearchParams({
-    [AUTH_REDIRECT_QUERY_KEY]: pathname,
-  });
-
-  return `${APP_ROUTES.home}?${searchParams.toString()}`;
+  return APP_ROUTES.authRedirect(pathname);
 }
 
 async function upsertUserProfile(user: {
@@ -28,28 +25,26 @@ async function upsertUserProfile(user: {
         ? metadata.name
         : null;
   const avatarUrl = typeof metadata.avatar_url === "string" ? metadata.avatar_url : null;
+  const profilePayload: TablesInsert<"user_profiles"> = {
+    id: user.id,
+    email: user.email ?? "",
+    full_name: fullName,
+    avatar_url: avatarUrl,
+  };
 
   const { data, error } = await admin
     .from("user_profiles")
-    .upsert(
-      {
-        id: user.id,
-        email: user.email ?? "",
-        full_name: fullName,
-        avatar_url: avatarUrl,
-      },
-      {
-        onConflict: "id",
-      },
-    )
+    .upsert(profilePayload, {
+      onConflict: "id",
+    })
     .select("*")
-    .single<UserProfile>();
+    .single();
 
   if (error) {
     throw new Error(`Failed to upsert user profile: ${error.message}`);
   }
 
-  return data;
+  return data satisfies UserProfile;
 }
 
 export async function getAuthContext(): Promise<AuthContext> {
