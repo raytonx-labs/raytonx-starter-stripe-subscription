@@ -11,11 +11,12 @@ export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
 };
 
 const variantClasses: Record<ButtonVariant, string> = {
-  default: "bg-white text-zinc-950 hover:bg-zinc-200",
-  outline: "border border-white/15 bg-transparent text-zinc-50 hover:bg-white/10",
-  ghost: "bg-transparent text-zinc-50 hover:bg-white/10",
-  icon: "bg-transparent text-zinc-50 hover:bg-white/10",
-  secondary: "bg-zinc-100 text-zinc-950 hover:bg-zinc-200",
+  default: "bg-primary text-primary-foreground hover:bg-primary/90",
+  outline:
+    "border border-border bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
+  ghost: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
+  icon: "bg-transparent text-foreground hover:bg-accent hover:text-accent-foreground",
+  secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/90",
 };
 
 const sizeClasses: Record<ButtonSize, string> = {

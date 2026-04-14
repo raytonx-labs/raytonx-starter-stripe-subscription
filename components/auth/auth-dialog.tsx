@@ -8,7 +8,7 @@ import { FaGithub } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 import { z } from "zod";
 
-import { Button } from "@/components/ui/button";
+import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
   DialogClose,
@@ -34,6 +34,10 @@ type OAuthProvider = "github" | "google";
 
 type AuthDialogProps = {
   defaultNextPath?: string;
+  triggerLabel?: string;
+  triggerVariant?: ButtonProps["variant"];
+  triggerSize?: ButtonProps["size"];
+  triggerClassName?: string;
 };
 
 const authSchema = z.object({
@@ -70,7 +74,13 @@ function ProviderButton({
   );
 }
 
-export function AuthDialog({ defaultNextPath }: AuthDialogProps) {
+export function AuthDialog({
+  defaultNextPath,
+  triggerLabel = "登录",
+  triggerVariant = "default",
+  triggerSize = "default",
+  triggerClassName,
+}: AuthDialogProps) {
   const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -185,7 +195,13 @@ export function AuthDialog({ defaultNextPath }: AuthDialogProps) {
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button className="rounded-full px-5">登录</Button>
+        <Button
+          variant={triggerVariant}
+          size={triggerSize}
+          className={["rounded-full", triggerClassName].filter(Boolean).join(" ")}
+        >
+          {triggerLabel}
+        </Button>
       </DialogTrigger>
 
       <DialogContent>
@@ -200,7 +216,7 @@ export function AuthDialog({ defaultNextPath }: AuthDialogProps) {
           </DialogClose>
         </DialogHeader>
 
-        <div className="mt-5 flex rounded-full border border-white/10 bg-white/5 p-1">
+        <div className="mt-5 flex rounded-full border border-border bg-muted p-1">
           <Button
             type="button"
             variant={mode === "sign-in" ? "default" : "ghost"}
@@ -244,7 +260,7 @@ export function AuthDialog({ defaultNextPath }: AuthDialogProps) {
           />
         </div>
 
-        <div className="my-6 h-px bg-white/10" />
+        <div className="my-6 h-px bg-border" />
 
         <Form {...form}>
           <form className="grid gap-4" onSubmit={form.handleSubmit(handleAuth)}>
@@ -317,7 +333,7 @@ export function AuthDialog({ defaultNextPath }: AuthDialogProps) {
         </Form>
 
         {message ? (
-          <p className="mt-4 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 text-sm leading-6 text-zinc-300">
+          <p className="mt-4 rounded-2xl border border-border bg-muted px-4 py-3 text-sm leading-6 text-muted-foreground">
             {message}
           </p>
         ) : null}

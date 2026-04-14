@@ -14,7 +14,7 @@ export const DialogPortal = DialogPrimitive.Portal;
 export function DialogOverlay({ className = "", ...props }: DialogOverlayProps) {
   return (
     <DialogPrimitive.Overlay
-      className={["fixed inset-0 z-50 bg-black/70 backdrop-blur-sm", className].join(" ")}
+      className={["fixed inset-0 z-50 bg-black/60 backdrop-blur-sm", className].join(" ")}
       {...props}
     />
   );
@@ -26,7 +26,7 @@ export function DialogContent({ className = "", children, ...props }: DialogCont
       <DialogOverlay />
       <DialogPrimitive.Content
         className={[
-          "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-white/10 bg-zinc-950 p-6 text-zinc-50 shadow-2xl shadow-black/40 outline-none",
+          "fixed left-1/2 top-1/2 z-50 w-[calc(100vw-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 rounded-3xl border border-border bg-popover p-6 text-popover-foreground shadow-2xl shadow-black/40 outline-none",
           className,
         ].join(" ")}
         {...props}

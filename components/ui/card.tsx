@@ -4,7 +4,7 @@ export function Card({ className = "", ...props }: React.HTMLAttributes<HTMLDivE
   return (
     <div
       className={[
-        "rounded-3xl border border-white/10 bg-white/5 shadow-2xl shadow-black/20",
+        "rounded-3xl border border-border bg-card text-card-foreground shadow-2xl shadow-black/20",
         className,
       ].join(" ")}
       {...props}
@@ -26,7 +26,9 @@ export function CardDescription({
   className = "",
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={["text-sm leading-6 text-zinc-300", className].join(" ")} {...props} />;
+  return (
+    <p className={["text-sm leading-6 text-muted-foreground", className].join(" ")} {...props} />
+  );
 }
 
 export function CardContent({ className = "", ...props }: React.HTMLAttributes<HTMLDivElement>) {

@@ -43,7 +43,7 @@ export function FormLabel({
   className = "",
   ...props
 }: React.LabelHTMLAttributes<HTMLLabelElement>) {
-  return <label className={["text-sm text-zinc-300", className].join(" ")} {...props} />;
+  return <label className={["text-sm text-foreground", className].join(" ")} {...props} />;
 }
 
 export function FormControl({ children }: { children: React.ReactElement }) {
@@ -60,7 +60,7 @@ export function FormDescription({
   className = "",
   ...props
 }: React.HTMLAttributes<HTMLParagraphElement>) {
-  return <p className={["text-sm text-zinc-400", className].join(" ")} {...props} />;
+  return <p className={["text-sm text-muted-foreground", className].join(" ")} {...props} />;
 }
 
 export function FormMessage({
@@ -78,7 +78,7 @@ export function FormMessage({
   }
 
   return (
-    <p className={["text-sm text-red-400", className].join(" ")} {...props}>
+    <p className={["text-sm text-destructive", className].join(" ")} {...props}>
       {message}
     </p>
   );
