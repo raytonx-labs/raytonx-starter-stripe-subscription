@@ -29,6 +29,10 @@ This folder contains the App Router entrypoints, protected pages, and route hand
   - Returns the current authenticated session and profile snapshot.
   - Intended as the shared session endpoint for future auth UI and client-side bootstrap needs.
 
+- `app/auth/callback/route.ts`
+  - Exchanges the Supabase OAuth code for a session.
+  - Redirects the user back to the protected destination after login.
+
 ## Layout files
 
 - `app/layout.tsx`
