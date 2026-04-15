@@ -11,10 +11,18 @@ This folder contains SQL and database notes that support the application modules
 - Enables RLS and base self-read/self-update policies.
 - Adds the `updated_at` trigger.
 
+### `supabase-stripe-schema.sql`
+
+- Creates `public.stripe_customers`.
+- Creates `public.stripe_subscriptions`.
+- Creates `public.stripe_billing_events`.
+- Adds RLS and self-read policies for user-owned billing records.
+- Adds update timestamp triggers for the mapped Stripe tables.
+
 ## Usage
 
-Run these SQL files in the Supabase SQL editor before testing protected routes that depend on app profile data.
+Run `supabase-auth-schema.sql` first, then `supabase-stripe-schema.sql` in the Supabase SQL editor before testing protected routes or billing flows.
 
 ## Notes for future work
 
-- Subscription tables, Stripe customer mappings, and webhook event logs should be added here as separate SQL files once billing work starts.
+- After running the Stripe schema, regenerate Supabase types with `pnpx supabase gen types typescript` so the billing tables are available in `lib/supabase/database.ts`.
