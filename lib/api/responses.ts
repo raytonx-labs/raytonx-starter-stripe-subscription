@@ -30,6 +30,10 @@ export function badRequest(message: string) {
   return jsonError(message, 400);
 }
 
+export function forbidden(message = "Forbidden") {
+  return jsonError(message, 403);
+}
+
 export function internalServerError(message: string) {
   return jsonError(message, 500);
 }
