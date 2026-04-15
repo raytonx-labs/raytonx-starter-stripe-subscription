@@ -1,20 +1,15 @@
-import { unauthorized } from "@/lib/api/responses";
-import { getAuthContext } from "@/lib/auth/session";
+import { requireApiUser } from "@/lib/api/auth";
 
 export async function GET() {
-  const auth = await getAuthContext();
+  const auth = await requireApiUser();
 
-  if (!auth.isAuthenticated) {
-    return unauthorized({
-      authenticated: false,
-      user: null,
-      profile: null,
-    });
+  if (!auth.ok) {
+    return auth.response;
   }
 
   return Response.json({
     authenticated: true,
-    user: auth.user,
-    profile: auth.profile,
+    user: auth.auth.user,
+    profile: auth.auth.profile,
   });
 }

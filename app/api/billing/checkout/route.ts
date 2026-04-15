@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import { badGateway, badRequest, internalServerError, unauthorized } from "@/lib/api/responses";
-import { getAuthContext } from "@/lib/auth/session";
+import { requireApiUser } from "@/lib/api/auth";
+import { badGateway, badRequest, internalServerError } from "@/lib/api/responses";
 import { createStripeCheckoutSession } from "@/lib/billing/stripe";
 
 const checkoutSchema = z.object({
@@ -9,10 +9,10 @@ const checkoutSchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const auth = await getAuthContext();
+  const apiAuth = await requireApiUser();
 
-  if (!auth.isAuthenticated) {
-    return unauthorized();
+  if (!apiAuth.ok) {
+    return apiAuth.response;
   }
 
   let payload: unknown;
@@ -31,8 +31,8 @@ export async function POST(request: Request) {
 
   try {
     const checkoutSession = await createStripeCheckoutSession({
-      userId: auth.user.id,
-      email: auth.user.email,
+      userId: apiAuth.auth.user.id,
+      email: apiAuth.auth.user.email,
       interval: parsed.data.interval,
     });
 
