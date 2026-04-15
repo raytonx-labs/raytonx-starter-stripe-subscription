@@ -1,24 +1,18 @@
-import { NextResponse } from "next/server";
-
+import { unauthorized } from "@/lib/api/responses";
 import { getAuthContext } from "@/lib/auth/session";
 
 export async function GET() {
   const auth = await getAuthContext();
 
   if (!auth.isAuthenticated) {
-    return NextResponse.json(
-      {
-        authenticated: false,
-        user: null,
-        profile: null,
-      },
-      {
-        status: 401,
-      },
-    );
+    return unauthorized({
+      authenticated: false,
+      user: null,
+      profile: null,
+    });
   }
 
-  return NextResponse.json({
+  return Response.json({
     authenticated: true,
     user: auth.user,
     profile: auth.profile,

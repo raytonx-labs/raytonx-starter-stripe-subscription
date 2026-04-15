@@ -8,6 +8,134 @@ export type Database = {
   };
   public: {
     Tables: {
+      stripe_billing_events: {
+        Row: {
+          created_at: string;
+          event_type: string;
+          id: string;
+          payload: Json;
+          processed_at: string;
+          stripe_customer_id: string | null;
+          stripe_event_id: string;
+          stripe_subscription_id: string | null;
+          user_id: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          payload: Json;
+          processed_at?: string;
+          stripe_customer_id?: string | null;
+          stripe_event_id: string;
+          stripe_subscription_id?: string | null;
+          user_id?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          payload?: Json;
+          processed_at?: string;
+          stripe_customer_id?: string | null;
+          stripe_event_id?: string;
+          stripe_subscription_id?: string | null;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      stripe_customers: {
+        Row: {
+          created_at: string;
+          email: string;
+          id: string;
+          stripe_customer_id: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          email: string;
+          id?: string;
+          stripe_customer_id: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          created_at?: string;
+          email?: string;
+          id?: string;
+          stripe_customer_id?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      stripe_subscriptions: {
+        Row: {
+          cancel_at_period_end: boolean;
+          canceled_at: string | null;
+          created_at: string;
+          current_period_end: string | null;
+          current_period_start: string | null;
+          ended_at: string | null;
+          id: string;
+          interval: string;
+          metadata: Json;
+          status: string;
+          stripe_customer_id: string;
+          stripe_price_id: string;
+          stripe_subscription_id: string;
+          trial_end: string | null;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          current_period_end?: string | null;
+          current_period_start?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          interval: string;
+          metadata?: Json;
+          status: string;
+          stripe_customer_id: string;
+          stripe_price_id: string;
+          stripe_subscription_id: string;
+          trial_end?: string | null;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          cancel_at_period_end?: boolean;
+          canceled_at?: string | null;
+          created_at?: string;
+          current_period_end?: string | null;
+          current_period_start?: string | null;
+          ended_at?: string | null;
+          id?: string;
+          interval?: string;
+          metadata?: Json;
+          status?: string;
+          stripe_customer_id?: string;
+          stripe_price_id?: string;
+          stripe_subscription_id?: string;
+          trial_end?: string | null;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "stripe_subscriptions_stripe_customer_id_fkey";
+            columns: ["stripe_customer_id"];
+            isOneToOne: false;
+            referencedRelation: "stripe_customers";
+            referencedColumns: ["stripe_customer_id"];
+          },
+        ];
+      };
       user_profiles: {
         Row: {
           avatar_url: string | null;
