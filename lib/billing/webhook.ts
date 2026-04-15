@@ -1,0 +1,270 @@
+import "server-only";
+import Stripe from "stripe";
+
+import { getStripeClient } from "@/lib/billing/stripe";
+import { createAdminClient } from "@/lib/supabase/admin";
+import type { Json, TablesInsert } from "@/lib/supabase/database";
+
+function toIsoDateTime(value?: number | null) {
+  return value ? new Date(value * 1000).toISOString() : null;
+}
+
+function getCustomerId(
+  customer: string | Stripe.Customer | Stripe.DeletedCustomer | null | undefined,
+) {
+  if (!customer) {
+    return null;
+  }
+
+  return typeof customer === "string" ? customer : customer.id;
+}
+
+function getSubscriptionPrice(subscription: Stripe.Subscription) {
+  const price = subscription.items.data[0]?.price;
+
+  if (!price || typeof price === "string") {
+    throw new Error(`Missing expanded price on subscription ${subscription.id}`);
+  }
+
+  return price;
+}
+
+function getSubscriptionInterval(subscription: Stripe.Subscription) {
+  const price = getSubscriptionPrice(subscription);
+  const interval = price.recurring?.interval;
+
+  if (interval !== "month" && interval !== "year") {
+    throw new Error(`Unsupported subscription interval on subscription ${subscription.id}`);
+  }
+
+  return interval;
+}
+
+async function getExpandedSubscription(subscription: Stripe.Subscription) {
+  const price = subscription.items.data[0]?.price;
+
+  if (price && typeof price !== "string") {
+    return subscription;
+  }
+
+  const stripe = getStripeClient();
+
+  try {
+    return await stripe.subscriptions.retrieve(subscription.id, {
+      expand: ["items.data.price"],
+    });
+  } catch {
+    return subscription;
+  }
+}
+
+async function syncStripeCustomerFromStripeCustomerId(stripeCustomerId: string) {
+  const admin = createAdminClient();
+  const stripe = getStripeClient();
+
+  const { data: existingCustomer, error: lookupError } = await admin
+    .from("stripe_customers")
+    .select("*")
+    .eq("stripe_customer_id", stripeCustomerId)
+    .maybeSingle();
+
+  if (lookupError) {
+    throw new Error(`Failed to load Stripe customer mapping: ${lookupError.message}`);
+  }
+
+  if (existingCustomer) {
+    return existingCustomer;
+  }
+
+  const stripeCustomer = await stripe.customers.retrieve(stripeCustomerId);
+
+  if (stripeCustomer.deleted) {
+    return null;
+  }
+
+  const userId = stripeCustomer.metadata?.user_id;
+
+  if (!userId) {
+    return null;
+  }
+
+  const { data: savedCustomer, error: saveError } = await admin
+    .from("stripe_customers")
+    .upsert(
+      {
+        user_id: userId,
+        stripe_customer_id: stripeCustomer.id,
+        email: stripeCustomer.email ?? "",
+      },
+      {
+        onConflict: "user_id",
+      },
+    )
+    .select("*")
+    .single();
+
+  if (saveError) {
+    throw new Error(`Failed to save Stripe customer mapping from webhook: ${saveError.message}`);
+  }
+
+  return savedCustomer;
+}
+
+async function syncStripeSubscription(subscription: Stripe.Subscription) {
+  const admin = createAdminClient();
+  const expandedSubscription = await getExpandedSubscription(subscription);
+  const subscriptionWithPeriods = expandedSubscription as Stripe.Subscription & {
+    current_period_start?: number;
+    current_period_end?: number;
+    trial_end?: number;
+    canceled_at?: number;
+    ended_at?: number;
+    billing_cycle_anchor?: number;
+  };
+  const stripeCustomerId = getCustomerId(expandedSubscription.customer);
+
+  if (!stripeCustomerId) {
+    throw new Error(`Missing Stripe customer on subscription ${expandedSubscription.id}`);
+  }
+
+  const customer = await syncStripeCustomerFromStripeCustomerId(stripeCustomerId);
+
+  if (!customer) {
+    throw new Error(`Unable to resolve user for Stripe customer ${stripeCustomerId}`);
+  }
+
+  const price = getSubscriptionPrice(expandedSubscription);
+  const interval = getSubscriptionInterval(expandedSubscription);
+  const payload: TablesInsert<"stripe_subscriptions"> = {
+    user_id: customer.user_id,
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: expandedSubscription.id,
+    stripe_price_id: price.id,
+    status: expandedSubscription.status,
+    interval,
+    cancel_at_period_end: expandedSubscription.cancel_at_period_end,
+    current_period_start: toIsoDateTime(
+      subscriptionWithPeriods.current_period_start ?? subscriptionWithPeriods.billing_cycle_anchor,
+    ),
+    current_period_end: toIsoDateTime(subscriptionWithPeriods.current_period_end),
+    trial_end: toIsoDateTime(subscriptionWithPeriods.trial_end),
+    canceled_at: toIsoDateTime(subscriptionWithPeriods.canceled_at),
+    ended_at: toIsoDateTime(subscriptionWithPeriods.ended_at),
+    metadata: expandedSubscription.metadata as Json,
+  };
+
+  const { data, error } = await admin
+    .from("stripe_subscriptions")
+    .upsert(payload, {
+      onConflict: "user_id",
+    })
+    .select("*")
+    .single();
+
+  if (error) {
+    throw new Error(`Failed to sync Stripe subscription: ${error.message}`);
+  }
+
+  return data;
+}
+
+async function recordStripeBillingEvent(event: Stripe.Event, userId: string | null) {
+  const admin = createAdminClient();
+  const stripeEventObject =
+    typeof event.data.object === "object" && event.data.object !== null
+      ? (event.data.object as unknown as Record<string, unknown>)
+      : null;
+  const stripeCustomerId =
+    stripeEventObject && "customer" in stripeEventObject
+      ? getCustomerId(
+          stripeEventObject.customer as
+            | string
+            | Stripe.Customer
+            | Stripe.DeletedCustomer
+            | null
+            | undefined,
+        )
+      : null;
+  const stripeSubscriptionId =
+    stripeEventObject && "subscription" in stripeEventObject
+      ? typeof stripeEventObject.subscription === "string"
+        ? stripeEventObject.subscription
+        : ((stripeEventObject.subscription as { id?: string } | null | undefined)?.id ?? null)
+      : null;
+
+  const payload: TablesInsert<"stripe_billing_events"> = {
+    stripe_event_id: event.id,
+    event_type: event.type,
+    stripe_customer_id: stripeCustomerId,
+    stripe_subscription_id: stripeSubscriptionId,
+    user_id: userId,
+    payload: event as unknown as Json,
+  };
+
+  const { error } = await admin.from("stripe_billing_events").upsert(payload, {
+    onConflict: "stripe_event_id",
+  });
+
+  if (error) {
+    throw new Error(`Failed to record Stripe webhook event: ${error.message}`);
+  }
+}
+
+async function syncSubscriptionById(subscriptionId: string) {
+  const stripe = getStripeClient();
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+
+  return syncStripeSubscription(subscription);
+}
+
+export async function handleStripeWebhookEvent(event: Stripe.Event) {
+  let userId: string | null = null;
+
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      if (session.mode === "subscription" && session.subscription) {
+        const stripeSubscriptionId =
+          typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+        const subscription = await syncSubscriptionById(stripeSubscriptionId);
+        userId = subscription.user_id;
+      }
+
+      break;
+    }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.resumed":
+    case "customer.subscription.paused":
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      const syncedSubscription = await syncStripeSubscription(subscription);
+      userId = syncedSubscription.user_id;
+      break;
+    }
+    case "invoice.paid":
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice & {
+        subscription?: string | Stripe.Subscription | null;
+      };
+      const subscriptionId =
+        typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+
+      if (subscriptionId) {
+        const subscription = await syncSubscriptionById(subscriptionId);
+        userId = subscription.user_id;
+      }
+
+      break;
+    }
+    default:
+      break;
+  }
+
+  await recordStripeBillingEvent(event, userId);
+
+  return {
+    received: true as const,
+  };
+}
