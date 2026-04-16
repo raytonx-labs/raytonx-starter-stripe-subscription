@@ -19,6 +19,28 @@ function getCustomerId(
   return typeof customer === "string" ? customer : customer.id;
 }
 
+function getSubscriptionId(subscription: string | Stripe.Subscription | null | undefined) {
+  if (!subscription) {
+    return null;
+  }
+
+  return typeof subscription === "string" ? subscription : subscription.id;
+}
+
+function getInvoiceSubscriptionId(
+  invoice: Stripe.Invoice & {
+    subscription?: string | Stripe.Subscription | null;
+  },
+) {
+  const legacySubscriptionId = getSubscriptionId(invoice.subscription);
+
+  if (legacySubscriptionId) {
+    return legacySubscriptionId;
+  }
+
+  return getSubscriptionId(invoice.parent?.subscription_details?.subscription);
+}
+
 function getSubscriptionPrice(subscription: Stripe.Subscription) {
   const item = getPrimarySubscriptionItem(subscription);
   const price = item.price;
@@ -187,12 +209,7 @@ async function recordStripeBillingEvent(event: Stripe.Event, userId: string | nu
             | undefined,
         )
       : null;
-  const stripeSubscriptionId =
-    stripeEventObject && "subscription" in stripeEventObject
-      ? typeof stripeEventObject.subscription === "string"
-        ? stripeEventObject.subscription
-        : ((stripeEventObject.subscription as { id?: string } | null | undefined)?.id ?? null)
-      : null;
+  const stripeSubscriptionId = getEventSubscriptionId(event);
 
   const payload: TablesInsert<"stripe_billing_events"> = {
     stripe_event_id: event.id,
@@ -221,6 +238,35 @@ async function syncSubscriptionById(subscriptionId: string) {
   return syncStripeSubscription(subscription);
 }
 
+function getEventSubscriptionId(event: Stripe.Event) {
+  switch (event.type) {
+    case "checkout.session.completed": {
+      const session = event.data.object as Stripe.Checkout.Session;
+
+      return getSubscriptionId(session.subscription);
+    }
+    case "customer.subscription.created":
+    case "customer.subscription.updated":
+    case "customer.subscription.resumed":
+    case "customer.subscription.paused":
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+
+      return subscription.id;
+    }
+    case "invoice.paid":
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice & {
+        subscription?: string | Stripe.Subscription | null;
+      };
+
+      return getInvoiceSubscriptionId(invoice);
+    }
+    default:
+      return null;
+  }
+}
+
 export async function handleStripeWebhookEvent(event: Stripe.Event) {
   let userId: string | null = null;
 
@@ -229,8 +275,12 @@ export async function handleStripeWebhookEvent(event: Stripe.Event) {
       const session = event.data.object as Stripe.Checkout.Session;
 
       if (session.mode === "subscription" && session.subscription) {
-        const stripeSubscriptionId =
-          typeof session.subscription === "string" ? session.subscription : session.subscription.id;
+        const stripeSubscriptionId = getSubscriptionId(session.subscription);
+
+        if (!stripeSubscriptionId) {
+          break;
+        }
+
         const subscription = await syncSubscriptionById(stripeSubscriptionId);
         userId = subscription.user_id;
       }
@@ -243,7 +293,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event) {
     case "customer.subscription.paused":
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      const syncedSubscription = await syncStripeSubscription(subscription);
+      const syncedSubscription = await syncSubscriptionById(subscription.id);
       userId = syncedSubscription.user_id;
       break;
     }
@@ -252,8 +302,7 @@ export async function handleStripeWebhookEvent(event: Stripe.Event) {
       const invoice = event.data.object as Stripe.Invoice & {
         subscription?: string | Stripe.Subscription | null;
       };
-      const subscriptionId =
-        typeof invoice.subscription === "string" ? invoice.subscription : invoice.subscription?.id;
+      const subscriptionId = getInvoiceSubscriptionId(invoice);
 
       if (subscriptionId) {
         const subscription = await syncSubscriptionById(subscriptionId);
