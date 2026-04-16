@@ -146,6 +146,7 @@ async function syncStripeCustomerFromStripeCustomerId(stripeCustomerId: string) 
 async function syncStripeSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient();
   const expandedSubscription = await getExpandedSubscription(subscription);
+  console.log(JSON.stringify(expandedSubscription, null, 2));
   const subscriptionItem = getPrimarySubscriptionItem(expandedSubscription);
   const stripeCustomerId = getCustomerId(expandedSubscription.customer);
 
