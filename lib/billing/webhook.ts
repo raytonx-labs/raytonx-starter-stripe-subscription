@@ -20,13 +20,24 @@ function getCustomerId(
 }
 
 function getSubscriptionPrice(subscription: Stripe.Subscription) {
-  const price = subscription.items.data[0]?.price;
+  const item = getPrimarySubscriptionItem(subscription);
+  const price = item.price;
 
   if (!price || typeof price === "string") {
     throw new Error(`Missing expanded price on subscription ${subscription.id}`);
   }
 
   return price;
+}
+
+function getPrimarySubscriptionItem(subscription: Stripe.Subscription) {
+  const item = subscription.items.data[0];
+
+  if (!item) {
+    throw new Error(`Missing subscription item on subscription ${subscription.id}`);
+  }
+
+  return item;
 }
 
 function getSubscriptionInterval(subscription: Stripe.Subscription) {
@@ -113,14 +124,7 @@ async function syncStripeCustomerFromStripeCustomerId(stripeCustomerId: string) 
 async function syncStripeSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient();
   const expandedSubscription = await getExpandedSubscription(subscription);
-  const subscriptionWithPeriods = expandedSubscription as Stripe.Subscription & {
-    current_period_start?: number;
-    current_period_end?: number;
-    trial_end?: number;
-    canceled_at?: number;
-    ended_at?: number;
-    billing_cycle_anchor?: number;
-  };
+  const subscriptionItem = getPrimarySubscriptionItem(expandedSubscription);
   const stripeCustomerId = getCustomerId(expandedSubscription.customer);
 
   if (!stripeCustomerId) {
@@ -143,13 +147,11 @@ async function syncStripeSubscription(subscription: Stripe.Subscription) {
     status: expandedSubscription.status,
     interval,
     cancel_at_period_end: expandedSubscription.cancel_at_period_end,
-    current_period_start: toIsoDateTime(
-      subscriptionWithPeriods.current_period_start ?? subscriptionWithPeriods.billing_cycle_anchor,
-    ),
-    current_period_end: toIsoDateTime(subscriptionWithPeriods.current_period_end),
-    trial_end: toIsoDateTime(subscriptionWithPeriods.trial_end),
-    canceled_at: toIsoDateTime(subscriptionWithPeriods.canceled_at),
-    ended_at: toIsoDateTime(subscriptionWithPeriods.ended_at),
+    current_period_start: toIsoDateTime(subscriptionItem.current_period_start),
+    current_period_end: toIsoDateTime(subscriptionItem.current_period_end),
+    trial_end: toIsoDateTime(expandedSubscription.trial_end),
+    canceled_at: toIsoDateTime(expandedSubscription.canceled_at),
+    ended_at: toIsoDateTime(expandedSubscription.ended_at),
     metadata: expandedSubscription.metadata as Json,
   };
 
@@ -212,7 +214,9 @@ async function recordStripeBillingEvent(event: Stripe.Event, userId: string | nu
 
 async function syncSubscriptionById(subscriptionId: string) {
   const stripe = getStripeClient();
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+  const subscription = await stripe.subscriptions.retrieve(subscriptionId, {
+    expand: ["items.data.price"],
+  });
 
   return syncStripeSubscription(subscription);
 }
