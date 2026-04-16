@@ -19,6 +19,11 @@ This folder contains SQL and database notes that support the application modules
 - Adds RLS and self-read policies for user-owned billing records.
 - Adds update timestamp triggers for the mapped Stripe tables.
 
+### `stripe-subscriptions-fields.zh-CN.md`
+
+- Documents the `public.stripe_subscriptions` mirror table fields in Chinese.
+- Clarifies cancellation fields such as `cancel_at`, `canceled_at`, `ended_at`, and `cancel_at_period_end`.
+
 ### `lib/supabase/database.ts`
 
 - Generate the Supabase types with `npx supabase gen types typescript --project-id your-project-id > lib/supabase/database.ts`.
@@ -32,3 +37,4 @@ Run `supabase-auth-schema.sql` first, then `supabase-stripe-schema.sql` in the S
 
 - After running the Stripe schema, regenerate Supabase types with `pnpx supabase gen types typescript` so the billing tables are available in `lib/supabase/database.ts`.
 - Keep subscription mirror tables read-only from the app side; service-role writes should stay in server-only billing helpers and webhook handlers.
+- The step-by-step billing flow and Stripe event mapping live in `docs/billing/README.md`.
