@@ -1,7 +1,14 @@
 "use client";
 
+import type { BillingInterval } from "@/lib/billing/env";
+
 type BillingPortalResponse = {
   portalUrl: string;
+  sessionId: string;
+};
+
+type BillingCheckoutResponse = {
+  checkoutUrl: string;
   sessionId: string;
 };
 
@@ -38,6 +45,32 @@ export async function openBillingPortal() {
 
   return {
     portalUrl: payload.portalUrl,
+    sessionId: payload.sessionId ?? "",
+  };
+}
+
+export async function openBillingCheckout(interval: BillingInterval) {
+  const response = await fetch("/api/billing/checkout", {
+    method: "POST",
+    headers: {
+      Accept: "application/json",
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ interval }),
+  });
+
+  if (!response.ok) {
+    throw new Error(await parseErrorMessage(response));
+  }
+
+  const payload = (await response.json()) as Partial<BillingCheckoutResponse>;
+
+  if (!payload.checkoutUrl) {
+    throw new Error("Stripe checkout did not return a URL");
+  }
+
+  return {
+    checkoutUrl: payload.checkoutUrl,
     sessionId: payload.sessionId ?? "",
   };
 }
