@@ -1,7 +1,6 @@
 "use client";
 
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useRouter } from "next/navigation";
 import { type ReactNode, useState } from "react";
 import { useForm } from "react-hook-form";
 import { FaGithub } from "react-icons/fa6";
@@ -81,7 +80,6 @@ export function AuthDialog({
   triggerSize = "default",
   triggerClassName,
 }: AuthDialogProps) {
-  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("sign-in");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -144,8 +142,7 @@ export function AuthDialog({
           return;
         }
 
-        router.refresh();
-        router.push(nextPath);
+        window.location.assign(nextPath);
         setOpen(false);
         return;
       }
@@ -166,8 +163,7 @@ export function AuthDialog({
       }
 
       if (data.session) {
-        router.refresh();
-        router.push(nextPath);
+        window.location.assign(nextPath);
         setOpen(false);
         return;
       }
