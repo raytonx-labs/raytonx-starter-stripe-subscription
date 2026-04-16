@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { APP_ROUTES } from "@/lib/auth/config";
 import type { AuthContext } from "@/lib/auth/types";
+import { openBillingPortal } from "@/lib/billing/client";
 import { createClient } from "@/lib/supabase/client";
 
 type AccountMenuProps = {
@@ -29,6 +30,16 @@ export function AccountMenu({ auth }: AccountMenuProps) {
     await supabase.auth.signOut();
     router.replace(APP_ROUTES.home);
     router.refresh();
+  }
+
+  async function handleManageBilling() {
+    try {
+      const { portalUrl } = await openBillingPortal();
+      window.location.assign(portalUrl);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "打开订阅管理失败";
+      console.error(message);
+    }
   }
 
   return (
@@ -55,6 +66,15 @@ export function AccountMenu({ auth }: AccountMenuProps) {
             <span className="truncate text-xs text-muted-foreground">{auth.user.email}</span>
           </div>
         </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          className="cursor-pointer"
+          onSelect={() => {
+            void handleManageBilling();
+          }}
+        >
+          管理订阅
+        </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           className="cursor-pointer text-destructive focus:text-destructive"
