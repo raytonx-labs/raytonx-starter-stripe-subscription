@@ -1,7 +1,12 @@
 import "server-only";
 import Stripe from "stripe";
 
-import { type BillingInterval, getStripeCheckoutEnv, getStripeSecretKey } from "@/lib/billing/env";
+import {
+  type BillingInterval,
+  getStripeCheckoutEnv,
+  getStripePortalEnv,
+  getStripeSecretKey,
+} from "@/lib/billing/env";
 import { createAdminClient } from "@/lib/supabase/admin";
 
 let stripeClient: Stripe | null = null;
@@ -108,5 +113,26 @@ export async function createStripeCheckoutSession(input: {
       user_id: userId,
       email,
     },
+  });
+}
+
+export async function createStripeCustomerPortalSession(input: {
+  userId: string;
+  email: string;
+  fullName?: string | null;
+  returnUrl?: string;
+}) {
+  const { userId, email, fullName, returnUrl } = input;
+  const { appUrl } = getStripePortalEnv();
+  const stripe = getStripeClient();
+  const customerId = await getOrCreateStripeCustomer({
+    userId,
+    email,
+    fullName,
+  });
+
+  return stripe.billingPortal.sessions.create({
+    customer: customerId,
+    return_url: returnUrl ?? `${appUrl}/app`,
   });
 }

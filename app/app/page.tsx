@@ -1,3 +1,4 @@
+import { ManageBillingButton } from "@/components/billing/manage-billing-button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { requireUser } from "@/lib/auth/session";
@@ -29,6 +30,18 @@ export default async function AppPage() {
               <CardDescription>角色</CardDescription>
               <CardTitle className="text-xl">{auth.profile.role}</CardTitle>
             </CardHeader>
+          </Card>
+          <Card className="border-border bg-muted/40 shadow-none">
+            <CardHeader>
+              <CardDescription>订阅管理</CardDescription>
+              <CardTitle className="text-xl">Stripe Customer Portal</CardTitle>
+              <CardDescription>可在 Stripe 中取消订阅、更新付款方式和查看账单。</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <ManageBillingButton variant="secondary" className="w-full sm:w-auto">
+                管理订阅
+              </ManageBillingButton>
+            </CardContent>
           </Card>
         </CardContent>
       </Card>

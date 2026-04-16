@@ -35,6 +35,14 @@ export function getStripeCheckoutEnv() {
   };
 }
 
+export function getStripePortalEnv() {
+  const { appUrl } = getSupabaseServerEnv();
+
+  return {
+    appUrl,
+  };
+}
+
 export function getStripeWebhookEnv() {
   const stripeSecretKey = getStripeSecretKey();
   const stripeWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
