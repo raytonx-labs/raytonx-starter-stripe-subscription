@@ -5,6 +5,10 @@ import { getStripeClient } from "@/lib/billing/stripe";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { Json, TablesInsert } from "@/lib/supabase/database";
 
+type StripeSubscriptionWithCancellation = Stripe.Subscription & {
+  cancel_at?: number | null;
+};
+
 function toIsoDateTime(value?: number | null) {
   return value ? new Date(value * 1000).toISOString() : null;
 }
@@ -71,6 +75,18 @@ function getSubscriptionInterval(subscription: Stripe.Subscription) {
   }
 
   return interval;
+}
+
+function getSubscriptionCancelAt(subscription: Stripe.Subscription) {
+  const subscriptionWithCancellation = subscription as StripeSubscriptionWithCancellation;
+
+  return subscriptionWithCancellation.cancel_at ?? null;
+}
+
+function getSubscriptionCancelAtPeriodEnd(subscription: Stripe.Subscription) {
+  // Customer Portal cancellation webhooks can still return cancel_at_period_end=false;
+  // treat a populated cancel_at as the reliable scheduled-cancellation signal.
+  return subscription.cancel_at_period_end || Boolean(getSubscriptionCancelAt(subscription));
 }
 
 async function getExpandedSubscription(subscription: Stripe.Subscription) {
@@ -146,7 +162,6 @@ async function syncStripeCustomerFromStripeCustomerId(stripeCustomerId: string) 
 async function syncStripeSubscription(subscription: Stripe.Subscription) {
   const admin = createAdminClient();
   const expandedSubscription = await getExpandedSubscription(subscription);
-  console.log(JSON.stringify(expandedSubscription, null, 2));
   const subscriptionItem = getPrimarySubscriptionItem(expandedSubscription);
   const stripeCustomerId = getCustomerId(expandedSubscription.customer);
 
@@ -169,7 +184,7 @@ async function syncStripeSubscription(subscription: Stripe.Subscription) {
     stripe_price_id: price.id,
     status: expandedSubscription.status,
     interval,
-    cancel_at_period_end: expandedSubscription.cancel_at_period_end,
+    cancel_at_period_end: getSubscriptionCancelAtPeriodEnd(expandedSubscription),
     current_period_start: toIsoDateTime(subscriptionItem.current_period_start),
     current_period_end: toIsoDateTime(subscriptionItem.current_period_end),
     trial_end: toIsoDateTime(expandedSubscription.trial_end),
