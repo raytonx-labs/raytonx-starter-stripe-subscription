@@ -22,7 +22,7 @@
 
 ## 功能方向
 
-项目计划覆盖以下能力：
+项目当前围绕以下能力展开：
 - 用户认证：邮箱密码、GitHub、Google 登录
 - 应用鉴权：登录态、受保护页面、管理员页面
 - 订阅支付：月付、年付、Stripe Checkout
@@ -32,19 +32,20 @@
 
 ## 当前进度
 
-当前已经完成的基础能力：
-- Supabase 项目连接与 SSR client 基础设施
-- 请求级 session 刷新能力
-- 认证基础结构
-- 受保护的 app / admin 页面骨架
-- 基于数据库角色的 admin guard
-- 基于 shadcn 风格的前端组件体系
+已经完成的部分：
+- Supabase 认证基础设施与 session 守卫
+- 登录弹窗与 GitHub / Google OAuth
+- 全局主题切换与统一的 shadcn 风格前端组件
+- Stripe Checkout Session
+- Stripe Customer Portal
+- 订阅状态展示页
+- 只读的 admin billing dashboard
 
-后续会继续补齐：
-- 登录弹窗与 OAuth 流程
-- pricing 与 checkout
-- subscription 状态展示
-- Stripe webhook 与后台管理页面
+接下来会继续完善：
+- 订阅成功 / 取消后的反馈页
+- 更完整的 pricing 页面
+- 更细的后台运营视图
+- Stripe 相关告警与故障排查流程
 
 ## 快速开始
 
@@ -57,6 +58,13 @@ pnpm dev
 - 复制 `.env.example` 到本地环境文件
 - 配置 Supabase 相关密钥
 - 执行 `docs/database/supabase-auth-schema.sql`
+- 执行 `docs/database/supabase-stripe-schema.sql`
+- 重新生成 `lib/supabase/database.ts`
+
+## Stripe 本地测试
+
+如果你需要在本地测试 Stripe webhook，可以参考这份本地测试环境说明：
+[本地测试环境](https://www.raytonx.com/solutions/stripe-subscription-solution/lessons/stripe-config)
 
 ## 文档入口
 

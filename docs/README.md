@@ -17,3 +17,13 @@ If you are new to the project, read in this order:
 2. `docs/auth/README.md`
 3. `docs/supabase/README.md`
 4. `docs/database/supabase-auth-schema.sql`
+5. `docs/database/supabase-stripe-schema.sql`
+
+## Current focus
+
+The codebase is currently centered on:
+
+- Supabase auth and role-based access
+- Stripe Checkout and Customer Portal
+- mirrored Stripe subscription state in Supabase
+- an admin billing dashboard for internal review

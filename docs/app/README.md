@@ -29,6 +29,15 @@ This folder contains the App Router entrypoints, protected pages, and route hand
   - Returns the current authenticated session and profile snapshot.
   - Intended as the shared session endpoint for future auth UI and client-side bootstrap needs.
 
+- `app/api/billing/checkout/route.ts`
+  - Creates Stripe Checkout sessions for monthly and yearly subscriptions.
+
+- `app/api/billing/portal/route.ts`
+  - Creates Stripe Customer Portal sessions for billing management.
+
+- `app/api/billing/webhook/route.ts`
+  - Receives Stripe webhook events and syncs subscription state back to Supabase.
+
 - `app/auth/callback/route.ts`
   - Exchanges the Supabase OAuth code for a session.
   - Redirects the user back to the protected destination after login.
@@ -44,5 +53,5 @@ This folder contains the App Router entrypoints, protected pages, and route hand
 
 ## Notes for future work
 
-- Auth modal, pricing page, checkout success/cancel pages, and admin management screens will all be added under `app/`.
+- Pricing, success/cancel, and any new billing views should continue to live under `app/`.
 - Route protection should stay centralized in `lib/auth/session.ts`, not duplicated across pages.
