@@ -1,0 +1,40 @@
+name: Keep Supabase Active
+
+on:
+  schedule:
+    # Run daily at 01:17 UTC (09:17 in Malaysia).
+    - cron: "17 1 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: keep-supabase-active
+  cancel-in-progress: true
+
+jobs:
+  visit-homepage:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE_URL: ${{ vars.KEEP_ALIVE_URL || 'https://stripe.raytonx.com/' }}
+    steps:
+      - name: Visit homepage
+        shell: bash
+        run: |
+          curl \
+            --fail-with-body \
+            --location \
+            --silent \
+            --show-error \
+            --retry 3 \
+            --retry-all-errors \
+            --retry-delay 5 \
+            --max-time 60 \
+            --user-agent "raytonx-supabase-keep-alive/1.0" \
+            --output /dev/null \
+            --write-out "Homepage responded with HTTP %{http_code}\n" \
+            --get \
+            --data-urlencode "keep_alive=$(date +%s)" \
+            "${SITE_URL}"
